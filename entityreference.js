@@ -1,4 +1,105 @@
 /**
+ * Implements hook_field_widget_form().
+ */
+function entityreference_field_widget_form(form, form_state, field, instance, langcode, items, delta, element) {
+  try {
+
+    // Build the widget based on the type (we only support auto complete for
+    // now).
+    switch (instance.widget.type) {
+      case 'entityreference_autocomplete':
+      case 'entityreference_autocomplete_tags':
+      case 'og_complex': // Adds support for the Organic Groups module.
+
+        // Set up the autocomplete.
+        var key_title = entity_primary_key_title(field.settings.target_type);
+        items[delta].type = 'autocomplete';
+        items[delta].delta = delta;
+        items[delta].remote = true;
+        items[delta].value = entity_primary_key(field.settings.target_type);
+        items[delta].label = key_title;
+        items[delta].filter = key_title;
+        items[delta].path = entityreference_autocomplete_path(field, items[delta]);
+
+        // Set any existing item values.
+        if (items[delta].item && items[delta].item.target_id) {
+          items[delta].default_value = items[delta].item.target_id;
+          items[delta].default_value_label = items[delta].item[key_title];
+        }
+
+        break;
+      default:
+        console.log('entityreference_field_widget_form - unknown widget type (' + instance.widget.type + ')');
+        break;
+    }
+
+  }
+  catch (error) { console.log('entityreference_field_widget_form - ' + error); }
+}
+
+/**
+ * Implements hook_field_formatter_view().
+ */
+function entityreference_field_formatter_view(entity_type, entity, field, instance, langcode, items, display) {
+  try {
+
+    //console.log(entity_type);
+    //console.log(entity);
+    //console.log(field);
+    //console.log(instance);
+    //console.log(display);
+
+    var element = {};
+    $.each(items, function(delta, item) {
+
+        //dpm(delta);
+        //console.log(item);
+
+        switch (display.type) {
+
+          // Label
+          case 'entityreference_label':
+            var text = item[entity_primary_key_title(item['entity_type'])];
+            if (display.settings.link == 1) { // Display as link.
+              var prefix = item['entity_type'];
+              if (in_array(prefix, ['taxonomy_term', 'taxonomy_vocabulary'])) {
+                prefix = prefix.replace('_', '/');
+              }
+              element[delta] = {
+                theme: 'button_link',
+                text: text,
+                path: prefix + '/' + item['target_id']
+              };
+            }
+            else { // Display as plain text.
+              element[delta] = { markup: '<div>' + text + '</div>' };
+            }
+            break;
+
+          // Entity id
+          case 'entityreference_entity_id':
+            element[delta] = { markup: '<div>' + item.target_id + '</div>' };
+            break;
+
+          // Rendered entity
+          case 'entityreference_entity_view':
+            drupalgap_entity_render_content(item.entity_type, item.entity);
+            element[delta] = { markup: item.entity.content };
+            break;
+
+          default:
+            console.log('entityreference_field_formatter_view - unsupported type: ' + display.type);
+            break;
+
+        }
+
+    });
+    return element;
+  }
+  catch (error) { console.log('entityreference_field_formatter_view - ' + error); }
+}
+
+/**
  * Given settings from an entity reference field's field_info_field object, this will
  * return an array of bundle names that are used for the target when using Simple entity
  * selection mode. It will return null if there are no target bundles.
@@ -38,42 +139,74 @@ function entityreference_get_bundle_and_name_from_field_settings(target_bundle, 
 }
 
 /**
- * Implements hook_field_widget_form().
+ * Implements hook_assemble_form_state_into_field().
  */
-function entityreference_field_widget_form(form, form_state, field, instance, langcode, items, delta, element) {
+function entityreference_assemble_form_state_into_field(entity_type, bundle,
+  form_state_value, field, instance, langcode, delta, field_key) {
   try {
-
-    // Build the widget based on the type (we only support auto complete for
-    // now).
+    if (typeof form_state_value === 'undefined') { return null; }
+    var result = null;
     switch (instance.widget.type) {
       case 'entityreference_autocomplete':
-      case 'entityreference_autocomplete_tags':
       case 'og_complex': // Adds support for the Organic Groups module.
-
-        // Set up the autocomplete.
-        var key_title = entity_primary_key_title(field.settings.target_type);
-        items[delta].type = 'autocomplete';
-        items[delta].delta = delta;
-        items[delta].remote = true;
-        items[delta].value = entity_primary_key(field.settings.target_type);
-        items[delta].label = key_title;
-        items[delta].filter = key_title;
-        items[delta].path = entityreference_autocomplete_path(field, items[delta]);
-
-        // Set any existing item values.
-        if (items[delta].item && items[delta].item.target_id) {
-          items[delta].default_value = items[delta].item.target_id;
-          items[delta].default_value_label = items[delta].item[key_title];
-        }
-
+        field_key.value = 'target_id';
+        if (form_state_value == '') { result = ''; } // This allows values to be deleted.
+        // @see http://drupal.stackexchange.com/a/40347/10645
+        else if (!empty(form_state_value)) { result = '... (' + form_state_value + ')'; }
         break;
       default:
-        console.log('entityreference_field_widget_form - unknown widget type (' + instance.widget.type + ')');
+        // For the "check boxes / radio buttons" widget, we must pass something
+        // like this: field_name: { und: [123, 456] }
+        // @see http://drupal.stackexchange.com/q/42658/10645
+        result = [];
+        field_key.use_delta = false;
+        field_key.use_wrapper = false;
+        var ids = form_state_value.split(',');
+        $.each(ids, function(delta, id) { if (!empty(id)) { result.push(id); } });
         break;
     }
+    return result;
+  }
+  catch (error) { console.log('entityreference_assemble_form_state_into_field - ' + error); }
+}
+
+/**
+ * Implements hook_views_exposed_filter().
+ * @param {Object} form
+ * @param {Object} form_state
+ * @param {Object} element
+ * @param {Object} filter
+ * @param {Object} field
+ */
+function entityreference_views_exposed_filter(form, form_state, element, filter, field) {
+  try {
+
+    //console.log('element');
+    //console.log(element);
+    //console.log('filter');
+    //console.log(filter);
+    //console.log('field');
+    //console.log(field);
+
+    // Make a select list with the available value options.
+    element.type = 'select';
+    element.options = {};
+    for (var index in filter.value_options) {
+      if (!filter.value_options.hasOwnProperty(index)) { continue; }
+      element.options[index] =  filter.value_options[index];
+    }
+    
+    if (!element.required) {
+      element.options['All'] = '- ' + t('Any') + ' -';
+      if (typeof element.value === 'undefined') { element.value = 'All'; }
+    }
+    
+    if (!empty(filter.value)) { element.value = filter.value[0]; }
+
+    return element;
 
   }
-  catch (error) { console.log('entityreference_field_widget_form - ' + error); }
+  catch (error) { console.log('entityreference_views_exposed_filter - ' + error); }
 }
 
 /**
@@ -374,100 +507,6 @@ function _theme_entityreference_pageshow(options) {
 }
 
 /**
- * Implements hook_field_formatter_view().
- */
-function entityreference_field_formatter_view(entity_type, entity, field, instance, langcode, items, display) {
-  try {
-
-    //console.log(entity_type);
-    //console.log(entity);
-    //console.log(field);
-    //console.log(instance);
-    //console.log(display);
-
-    var element = {};
-    $.each(items, function(delta, item) {
-
-        //dpm(delta);
-        //console.log(item);
-
-        switch (display.type) {
-
-          // Label
-          case 'entityreference_label':
-            var text = item[entity_primary_key_title(item['entity_type'])];
-            if (display.settings.link == 1) { // Display as link.
-              var prefix = item['entity_type'];
-              if (in_array(prefix, ['taxonomy_term', 'taxonomy_vocabulary'])) {
-                prefix = prefix.replace('_', '/');
-              }
-              element[delta] = {
-                theme: 'button_link',
-                text: text,
-                path: prefix + '/' + item['target_id']
-              };
-            }
-            else { // Display as plain text.
-              element[delta] = { markup: '<div>' + text + '</div>' };
-            }
-            break;
-
-          // Entity id
-          case 'entityreference_entity_id':
-            element[delta] = { markup: '<div>' + item.target_id + '</div>' };
-            break;
-
-          // Rendered entity
-          case 'entityreference_entity_view':
-            drupalgap_entity_render_content(item.entity_type, item.entity);
-            element[delta] = { markup: item.entity.content };
-            break;
-
-          default:
-            console.log('entityreference_field_formatter_view - unsupported type: ' + display.type);
-            break;
-
-        }
-
-    });
-    return element;
-  }
-  catch (error) { console.log('entityreference_field_formatter_view - ' + error); }
-}
-
-/**
- * Implements hook_assemble_form_state_into_field().
- */
-function entityreference_assemble_form_state_into_field(entity_type, bundle,
-  form_state_value, field, instance, langcode, delta, field_key) {
-  try {
-    if (typeof form_state_value === 'undefined') { return null; }
-    var result = null;
-    switch (instance.widget.type) {
-      case 'entityreference_autocomplete':
-      case 'og_complex': // Adds support for the Organic Groups module.
-        field_key.value = 'target_id';
-        if (form_state_value == '') { result = ''; } // This allows values to be deleted.
-        // @see http://drupal.stackexchange.com/a/40347/10645
-        else if (!empty(form_state_value)) { result = '... (' + form_state_value + ')'; }
-        break;
-      default:
-        // For the "check boxes / radio buttons" widget, we must pass something
-        // like this: field_name: { und: [123, 456] }
-        // @see http://drupal.stackexchange.com/q/42658/10645
-        result = [];
-        field_key.use_delta = false;
-        field_key.use_wrapper = false;
-        var ids = form_state_value.split(',');
-        $.each(ids, function(delta, id) { if (!empty(id)) { result.push(id); } });
-        break;
-    }
-    return result;
-  }
-  catch (error) { console.log('entityreference_assemble_form_state_into_field - ' + error); }
-}
-
-/**
  *
  */
 function _entityreference_onclick(input, input_id, field_name) {
@@ -514,43 +553,4 @@ function entityreference_autocomplete_path(field) {
     }
   }
   catch (error) { console.log('entityreference_autocomplete_path - ' + error); }
-}
-
-/**
- * Implements hook_views_exposed_filter().
- * @param {Object} form
- * @param {Object} form_state
- * @param {Object} element
- * @param {Object} filter
- * @param {Object} field
- */
-function entityreference_views_exposed_filter(form, form_state, element, filter, field) {
-  try {
-
-    //console.log('element');
-    //console.log(element);
-    //console.log('filter');
-    //console.log(filter);
-    //console.log('field');
-    //console.log(field);
-
-    // Make a select list with the available value options.
-    element.type = 'select';
-    element.options = {};
-    for (var index in filter.value_options) {
-      if (!filter.value_options.hasOwnProperty(index)) { continue; }
-      element.options[index] =  filter.value_options[index];
-    }
-    
-    if (!element.required) {
-      element.options['All'] = '- ' + t('Any') + ' -';
-      if (typeof element.value === 'undefined') { element.value = 'All'; }
-    }
-    
-    if (!empty(filter.value)) { element.value = filter.value[0]; }
-
-    return element;
-
-  }
-  catch (error) { console.log('entityreference_views_exposed_filter - ' + error); }
 }

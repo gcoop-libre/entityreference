@@ -3,7 +3,6 @@
  */
 function theme_entityreference(variables) {
   try {
-
     // @TODO - this function name is misleading because its primarily used to
     // provide the widget during node creation/editing, and not associated with
     // the public display of the field, which is typically the case when using
@@ -41,12 +40,10 @@ function theme_entityreference(variables) {
     // Selection" settings on this field.
     var handler = variables.field_info_field.settings.handler;
     switch (handler) {
-      
       // Views Entity Reference Display
       case 'views':
       case 'og': // Adds support for Organic Groups module.
       case 'base':
-        
         // Since our View will need a corresponding Views JSON Display, which
         // will return the same data as the Entity Reference Display that powers
         // this field, we need to assume the path to retrieve the JSON data.
@@ -82,9 +79,8 @@ function theme_entityreference(variables) {
         console.log('WARNING: theme_entityreference - unsupported handler (' + handler + ')');
         break;
     }
-    
+
     return html;
-    
   }
   catch (error) { console.log('theme_entityreference - ' + error); }
 }
@@ -98,7 +94,6 @@ function _theme_entityreference_pageshow(options) {
     // declare it first.
     var _theme_entityreference_pageshow_success = function(entity) {
       try {
-
         // If we have an entity, it means we are editing it, so build an array
         // of target ids, so we can easily reference them later.
         var target_ids = [];
@@ -139,9 +134,7 @@ function _theme_entityreference_pageshow(options) {
 
         // Call the index resource for the entity type.
         window[options.entity_type_index](query, { success: function(entities) {
-
           if (!entities || entities.length == 0) { return; }
-
           // Depending on what module wants to handle this, build the widget accordingly.
           // @TODO add support for parent/child term indentation on select lists, radios, checkboxes.
           var html = '';
@@ -151,69 +144,53 @@ function _theme_entityreference_pageshow(options) {
             var referenced_entity = entities[i];
 
             switch (options.widget.module) {
-
               // OPTIONS MODULE
               case 'options':
-
                 switch (options.widget.type) {
-
                   // Select list.
                   case 'options_select':
-
                     // Set aside the options until later.
                     if (!select_options) { select_options = {}; }
                     select_options[referenced_entity[primary_key]] = referenced_entity[label];
-
                     break;
 
                   // Checkboxes and radios.
                   case 'options_buttons':
-
-                      // Radios.
-                      if (options.cardinality == 1) {
-
-                        // Set aside the options until later.
-                        if (!select_options) { select_options = {}; }
-                        select_options[referenced_entity[primary_key]] = referenced_entity[label];
-
-                      }
-
-                      // Checkboxes
-                      else {
-
-                        // Build the checkbox.
-                        var checkbox_id = options.id + '_' + referenced_entity[primary_key];
-                        var checkbox = {
-                          title: referenced_entity[label],
-                          attributes: {
-                            id: checkbox_id,
-                            'class': css_classes,
-                            value: referenced_entity[primary_key],
-                            onclick: '_entityreference_onclick(this, \'' + options.id + '\', \'' + options.field_name + '\')'
-                          }
-                        };
-
-                        // Check it?
-                        if ($.inArray(referenced_entity[primary_key], target_ids) != -1) {
-                          checkbox.attributes.checked = "";
+                    // Radios.
+                    if (options.cardinality == 1) {
+                      // Set aside the options until later.
+                      if (!select_options) { select_options = {}; }
+                      select_options[referenced_entity[primary_key]] = referenced_entity[label];
+                    }
+                    // Checkboxes
+                    else {
+                      // Build the checkbox.
+                      var checkbox_id = options.id + '_' + referenced_entity[primary_key];
+                      var checkbox = {
+                        title: referenced_entity[label],
+                        attributes: {
+                          id: checkbox_id,
+                          'class': css_classes,
+                          value: referenced_entity[primary_key],
+                          onclick: '_entityreference_onclick(this, \'' + options.id + '\', \'' + options.field_name + '\')'
                         }
-
-                        // Build the label.
-                        var input_label = { element:checkbox };
-                        input_label.element.id = checkbox.attributes.id;
-
-                        // Finally, theme the checkbox.
-                        html += theme('checkbox', checkbox) + theme('form_element_label', input_label);
-
+                      };
+                      // Check it?
+                      if ($.inArray(referenced_entity[primary_key], target_ids) != -1) {
+                        checkbox.attributes.checked = "";
                       }
-
+                      // Build the label.
+                      var input_label = { element:checkbox };
+                      input_label.element.id = checkbox.attributes.id;
+                      // Finally, theme the checkbox.
+                      html += theme('checkbox', checkbox) + theme('form_element_label', input_label);
+                    }
                     break;
 
                   default:
                     console.log('WARNING: _theme_entityreference_pageshow - unsupported options widget type (' + options.widget.type + ')');
                     break;
                 }
-
                 break;
 
               // ENTITYREFERENCE MODULE
@@ -226,9 +203,7 @@ function _theme_entityreference_pageshow(options) {
                 break;
             }
           }
-
           // Do any post processing...
-
           // Handle select list options.
           if (options.widget.type == 'options_select' && select_options) {
             html += theme('select', {
@@ -240,10 +215,8 @@ function _theme_entityreference_pageshow(options) {
               value: target_ids.join(',')
             });
           }
-
           // Radio buttons and check boxes.
           else if (options.widget.type == 'options_buttons') {
-
             // Radios.
             if (options.cardinality == 1 && select_options) {
               html += theme('radios', {
@@ -256,10 +229,8 @@ function _theme_entityreference_pageshow(options) {
                 value: target_ids.join(',')
               });
             }
-
             // Checkboxes.
             else{
-
             }
 
             // Theme the hidden input to hold the value.
@@ -269,14 +240,11 @@ function _theme_entityreference_pageshow(options) {
                 value: target_ids.join(',')
               }
             }) + html;
-
           }
 
           // Finally inject the html into the waiting container.
           $('#' + options.id + '_container').html(html).trigger('create');
-
         }});
-        
       }
       catch (error) {
         console.log('_theme_entityreference_pageshow_success - ' + error);
@@ -292,7 +260,9 @@ function _theme_entityreference_pageshow(options) {
     }
     else { _theme_entityreference_pageshow_success(null); }
   }
-  catch (error) { console.log('_theme_entityreference_pageshow - ' + error); }
+  catch (error) {
+    console.log('_theme_entityreference_pageshow - ' + error);
+  }
 }
 
 /**
@@ -341,5 +311,7 @@ function entityreference_autocomplete_path(field) {
         break;
     }
   }
-  catch (error) { console.log('entityreference_autocomplete_path - ' + error); }
+  catch (error) {
+    console.log('entityreference_autocomplete_path - ' + error);
+  }
 }

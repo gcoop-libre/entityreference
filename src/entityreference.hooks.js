@@ -40,14 +40,6 @@ function entityreference_assemble_form_state_into_field(entity_type, bundle,
  */
 function entityreference_views_exposed_filter(form, form_state, element, filter, field) {
   try {
-
-    //console.log('element');
-    //console.log(element);
-    //console.log('filter');
-    //console.log(filter);
-    //console.log('field');
-    //console.log(field);
-
     // Make a select list with the available value options.
     element.type = 'select';
     element.options = {};
@@ -64,7 +56,6 @@ function entityreference_views_exposed_filter(form, form_state, element, filter,
     if (!empty(filter.value)) { element.value = filter.value[0]; }
 
     return element;
-
   }
   catch (error) { console.log('entityreference_views_exposed_filter - ' + error); }
 }

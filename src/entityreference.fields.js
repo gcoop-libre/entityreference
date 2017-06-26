@@ -3,14 +3,12 @@
  */
 function entityreference_field_widget_form(form, form_state, field, instance, langcode, items, delta, element) {
   try {
-
     // Build the widget based on the type (we only support auto complete for
     // now).
     switch (instance.widget.type) {
       case 'entityreference_autocomplete':
       case 'entityreference_autocomplete_tags':
       case 'og_complex': // Adds support for the Organic Groups module.
-
         // Set up the autocomplete.
         var key_title = entity_primary_key_title(field.settings.target_type);
         items[delta].type = 'autocomplete';
@@ -32,9 +30,10 @@ function entityreference_field_widget_form(form, form_state, field, instance, la
         console.log('entityreference_field_widget_form - unknown widget type (' + instance.widget.type + ')');
         break;
     }
-
   }
-  catch (error) { console.log('entityreference_field_widget_form - ' + error); }
+  catch (error) {
+    console.log('entityreference_field_widget_form - ' + error);
+  }
 }
 
 /**
@@ -42,21 +41,9 @@ function entityreference_field_widget_form(form, form_state, field, instance, la
  */
 function entityreference_field_formatter_view(entity_type, entity, field, instance, langcode, items, display) {
   try {
-
-    //console.log(entity_type);
-    //console.log(entity);
-    //console.log(field);
-    //console.log(instance);
-    //console.log(display);
-
     var element = {};
     $.each(items, function(delta, item) {
-
-        //dpm(delta);
-        //console.log(item);
-
         switch (display.type) {
-
           // Label
           case 'entityreference_label':
             var text = item[entity_primary_key_title(item['entity_type'])];
@@ -90,11 +77,11 @@ function entityreference_field_formatter_view(entity_type, entity, field, instan
           default:
             console.log('entityreference_field_formatter_view - unsupported type: ' + display.type);
             break;
-
         }
-
     });
     return element;
   }
-  catch (error) { console.log('entityreference_field_formatter_view - ' + error); }
+  catch (error) {
+    console.log('entityreference_field_formatter_view - ' + error);
+  }
 }

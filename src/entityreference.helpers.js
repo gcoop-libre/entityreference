@@ -27,7 +27,7 @@ function entityreference_get_bundle_and_name_from_field_settings(target_bundle, 
   switch (field_settings.target_type) {
     case 'node':
       result.bundle_name = 'type';
-        if (target_bundle == 'group') { result.bundle = target_bundle; }
+        result.bundle = target_bundle;
       break;
     case 'taxonomy_term':
       result.bundle_name = 'vid';

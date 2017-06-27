@@ -13,6 +13,7 @@ function entityreference_field_widget_form(form, form_state, field, instance, la
         var key_title = entity_primary_key_title(field.settings.target_type);
         items[delta].type = 'autocomplete';
         items[delta].delta = delta;
+        items[delta].cardinality = field.cardinality;
         items[delta].remote = true;
         items[delta].value = entity_primary_key(field.settings.target_type);
         items[delta].label = key_title;
@@ -485,7 +486,7 @@ function entityreference_autocomplete_path(field) {
       case 'views':
         // We're using a view, so return the path to the Page display for the
         // field.
-        return 'drupalgap/' +
+        return Drupal.settings.endpoint + '/' +
           field.settings.handler_settings.view.view_name + '/' +
           field.settings.handler_settings.view.display_name;
         break;
@@ -496,7 +497,7 @@ function entityreference_autocomplete_path(field) {
         if (arguments[1]) { arguments[1].custom = true; }
         // Since we're using the base handler, we'll use the Index resource for
         // the entity type.
-        return 'drupalgap/' + field.settings.target_type + '.json';
+        return Drupal.settings.endpoint + '/' + field.settings.target_type + '.json';
         break;
     }
   }

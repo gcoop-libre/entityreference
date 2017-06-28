@@ -13,6 +13,9 @@ function entityreference_field_widget_form(form, form_state, field, instance, la
         var key_title = entity_primary_key_title(field.settings.target_type);
         items[delta].type = 'autocomplete';
         items[delta].delta = delta;
+        items[delta].element_id = element.id;
+        items[delta].cardinality = field.cardinality;
+        items[delta].langcode = langcode;
         items[delta].remote = true;
         items[delta].value = entity_primary_key(field.settings.target_type);
         items[delta].label = key_title;

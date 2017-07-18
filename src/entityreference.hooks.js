@@ -14,6 +14,14 @@ function entityreference_assemble_form_state_into_field(entity_type, bundle,
         // @see http://drupal.stackexchange.com/a/40347/10645
         else if (!empty(form_state_value)) { result = '... (' + form_state_value + ')'; }
         break;
+      case 'entityreference_autocomplete_tags':
+        field_key.use_wrapper = false;
+        field_key.use_delta = true;
+        field_key.use_key = false;
+        if (form_state_value == '') { result = ''; } // This allows values to be deleted.
+        // @see http://drupal.stackexchange.com/a/40347/10645
+        else if (!empty(form_state_value)) { result = '... (' + form_state_value + ')'; }
+        break;
       default:
         // For the "check boxes / radio buttons" widget, we must pass something
         // like this: field_name: { und: [123, 456] }
